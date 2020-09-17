@@ -76,30 +76,22 @@ void setup() {
   
   Wire.begin();
 
-//  Serial.println("\nshutdown 2 sensors");
   prepareSensor(PIN_XSHUT_1, LOW);
   prepareSensor(PIN_XSHUT_2, LOW);
   delay(100);
-//  Serial.println("wake first sensor");
   prepareSensor(PIN_XSHUT_1, HIGH);
-//  Serial.print("set address sensor1: ");
-//  Serial.println(ADR_SENSOR_1, HEX);
   initSensor(&sensor1, PIN_XSHUT_1, ADR_SENSOR_1);
-
-//  Serial.println("wake second sensor");
   prepareSensor(PIN_XSHUT_2, HIGH);
-//  initSensor(&sensor2, PIN_XSHUT_2, ADR_SENSOR_2);
-//
+
   sensor1.setDistanceMode(VL53L1X::Medium);
   sensor1.setMeasurementTimingBudget(33000);
-  sensor1.startContinuous(50);
-//
-//
+//  sensor1.startContinuous(50);
+
   sensor2.setDistanceMode(VL53L1X::Medium);
   sensor2.setMeasurementTimingBudget(33000);
-//  sensor2.startContinuous(50);
+  sensor2.startContinuous(50);
 
-    printAddr();
+  printAddr();
 }
 
 void printDetails(VL53L1X *sensor)
@@ -131,9 +123,9 @@ void loop() {
 //  Serial.print("\nSensor2:\t");
 //  printDetails(&sensor1);
 //
-////  Serial.print(sensor2.read());
-////  if (sensor2.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-////  Serial.println();
+  Serial.print(sensor2.read());
+  if (sensor2.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+  Serial.println();
 //
 //  sensor2.stopContinuous();
 
