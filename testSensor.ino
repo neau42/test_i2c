@@ -1,22 +1,40 @@
 #include <Wire.h>
 #include <VL53L1X.h>
 
-#define PIN_XSHUT_1 PA4  //A4
-#define PIN_XSHUT_2 PA5   //A3
+//Pin de contrôle d'extinction - pour changement d'adresse
+#define PIN_XSHUT_1 PA4  //A4 - capteur haut
+#define PIN_XSHUT_2 PA5  //A3 - capteur bas
 
+//Futures adresses des capteurs [initialement 0x29]
 #define ADR_SENSOR_1 0x42
-//#define ADR_SENSOR_2 0x43
+#define ADR_SENSOR_2 0x24
 
+//Futures adresses des capteurs [initialement 0x29]
+#define SCL_Wire PA9
+#define SDA_Wire PA10
 
-VL53L1X sensor1 = VL53L1X();
-VL53L1X sensor2 = VL53L1X();
+VL53L1X sensor_up = VL53L1X();
+VL53L1X sensor_down = VL53L1X();
 
+void turn_off_sensors(){
+  //sensor_up
+  pinMode(PIN_XSHUT_1, OUTPUT);
+  digitalWrite(PIN_XSHUT_1, LOW);
+  //sensor_down
+  pinMode(PIN_XSHUT_1, OUTPUT);
+  digitalWrite(PIN_XSHUT_2, LOW);
+}
 void prepareSensor(byte pin, bool stat)
 {
   pinMode(pin, OUTPUT);
   digitalWrite(pin, stat);
 }
 
+/** Initialise a sensor and change its I2C address
+ *  Input :   *sensor : a ptr of a sensor object 
+ *            pin : The hardware pin connect to the sensor XSHUT
+ *            adr : The new sensor address for I2C connection
+**/
 void initSensor(VL53L1X *sensor, byte pin, uint8_t adr)
 {
   pinMode(pin, INPUT);
@@ -25,109 +43,34 @@ void initSensor(VL53L1X *sensor, byte pin, uint8_t adr)
   delay(100);
   sensor->setAddress(adr);
   sensor->setTimeout((uint16_t)500);
-}
-
-void printAddr()
-{
-    
-  byte error, address;
-  int nDevices;
-
-  Serial.println("Scanning...");
-
-  nDevices = 0;
-  for(address = 1; address < 127; address++) {
-    // The i2c_scanner uses the return value of
-    // the Write.endTransmisstion to see if
-    // a device did acknowledge to the address.
-
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-    
-    if (error == 0) {
-      Serial.print("I2C device found at address 0x");
-      if (address < 16) 
-        Serial.print("0");
-      Serial.println(address, HEX);
-
-      nDevices++;
-    }
-//    else if (error == 4) {
-//      Serial.print("Unknown error at address 0x");
-//      if (address < 16) 
-//        Serial.print("0");
-//      Serial.println(address, HEX);
-//    }    
-  }
-  if (nDevices == 0)
-  {
-    Serial.println("No I2C devices found");
-    while (1);
-  }
-  else
-    Serial.println("done");
+  sensor->setDistanceMode(VL53L1X::Medium);
+  sensor->setMeasurementTimingBudget(33000);
+  sensor->startContinuous(50);
 }
 
 void setup() {
-
   Serial.begin(9600);
-  Wire.setSCL(PA9);
-  Wire.setSDA(PA10);
   
+  Wire.setSCL(SCL_Wire);
+  Wire.setSDA(SDA_Wire);
   Wire.begin();
 
-  prepareSensor(PIN_XSHUT_1, LOW);
-  prepareSensor(PIN_XSHUT_2, LOW);
+  turn_off_sensors();
   delay(100);
   prepareSensor(PIN_XSHUT_1, HIGH);
-  initSensor(&sensor1, PIN_XSHUT_1, ADR_SENSOR_1);
-  prepareSensor(PIN_XSHUT_2, HIGH);
-
-  sensor1.setDistanceMode(VL53L1X::Medium);
-  sensor1.setMeasurementTimingBudget(33000);
-//  sensor1.startContinuous(50);
-
-  sensor2.setDistanceMode(VL53L1X::Medium);
-  sensor2.setMeasurementTimingBudget(33000);
-  sensor2.startContinuous(50);
-
-  printAddr();
+  initSensor(&sensor_up, PIN_XSHUT_1, ADR_SENSOR_1);
+  prepareSensor(PIN_XSHUT_2, HIGH);  
+  initSensor(&sensor_down, PIN_XSHUT_2, ADR_SENSOR_2);
 }
 
-void printDetails(VL53L1X *sensor)
-{
-  sensor->read();
-  Serial.print("range: ");
-  Serial.print(sensor->ranging_data.range_mm);
-  Serial.print("\tstatus: ");
-  Serial.print(VL53L1X::rangeStatusToString(sensor->ranging_data.range_status));
-  Serial.print("\tpeak signal: ");
-  Serial.print(sensor->ranging_data.peak_signal_count_rate_MCPS);
-  Serial.print("\tambient: ");
-  Serial.print(sensor->ranging_data.ambient_count_rate_MCPS);
-  }
-
 void loop() {
-
-//  sensor1.startContinuous(50);
-  Serial.print("\n\nSensor1:\t");
-  
-  Serial.print(sensor1.read());
-  if (sensor1.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+  Serial.print("\n\nsensor_up:\t");
+  Serial.print(sensor_up.read());
+  if (sensor_up.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
   Serial.println();
-//   printDetails(&sensor1);
-
-//  sensor1.stopContinuous();
-//
-//  sensor2.startContinuous(50);
-//  Serial.print("\nSensor2:\t");
-//  printDetails(&sensor1);
-//
-  Serial.print(sensor2.read());
-  if (sensor2.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+  Serial.print("\nsensor_down:\t");
+  Serial.print(sensor_down.read());
+  if (sensor_down.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
   Serial.println();
-//
-//  sensor2.stopContinuous();
-
-  delay(500);
+  delay(200);
 }
